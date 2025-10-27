@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TAC勉強管理（縦スクロール版）</title>
+<meta name="theme-color" content="#FF8A5B">
+<style>
+:root{--bg:#fff7f3;--card:#ffffff;--text:#2a2a2a;--muted:#777;--primary:#FF8A5B;--accent:#2EC4B6;--radius:18px;--shadow:0 8px 24px rgba(0,0,0,.08)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.appbar{position:sticky;top:0;z-index:5;background:#fff;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.06);font-weight:900;display:flex;justify-content:space-between;align-items:center}
+.pill{background:#2EC4B6;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
+.container{max-width:900px;margin:0 auto;padding:12px 16px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin:10px 0}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--primary);color:#fff;border:none;border-radius:14px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.sub{font-size:12px;color:var(--muted)}
+.badge{background:#eee;border-radius:12px;padding:4px 8px;font-size:12px}
+.bar{height:10px;background:#f0f0f0;border-radius:999px;overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--primary));width:0%}
+.subject-dot{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:6px}
+.watch{position:relative}
+.watch.active{background:linear-gradient(90deg,#FF8A5B,#FFB88A);box-shadow:0 0 12px rgba(255,138,91,.6)}
+@keyframes pop{0%{transform:scale(.96)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+.watch.flash{animation:pop .25s ease}
+.tabbar{position:sticky;bottom:0;background:#fff;border-top:1px solid rgba(0,0,0,.06);display:flex;gap:6px;justify-content:space-around;padding:10px}
+.tabbar button{flex:1;border:none;background:transparent;padding:10px 6px;border-radius:12px;font-weight:800}
+.tabbar button.active{background:#FFE9DF;color:#c24b19}
+section{display:none}
+section.active{display:block}
+.input{border:1px solid #ddd;border-radius:12px;padding:8px 10px;font-size:14px;background:#fff;outline:none}
+.divider{height:1px;background:rgba(0,0,0,.06);margin:8px 0}
+.right{margin-left:auto}
+</style>
+</head>
+<body>
+<div class="appbar">
+  <div>TAC勉強管理</div>
+  <div id="countdownHeader" class="pill" style="display:none"></div>
+</div>
+<div class="container">
+  <section id="home" class="active">
+    <!-- ✅ Homeにカウントダウン -->
+    <div class="card" id="countdownCard" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <div style="font-weight:800">試験カウントダウン</div>
+        <div class="pill" id="countdownHome">試験：未設定</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div class="sub">今週の合計</div>
+          <div style="font-size:28px;font-weight:900"><span id="weekTotal">0.0</span> h <span class="badge">目標 25h</span></div>
+        </div>
+        <div style="min-width:180px">
+          <div class="bar"><i id="weekBar" style="width:0%"></i></div>
+          <div class="sub" id="weekPct">0%</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div class="sub">総講義進捗</div>
+          <div style="font-size:22px;font-weight:800"><span id="doneLectures">0</span>/<span id="totalLectures">216</span>（<span id="progressPct">0%</span>）</div>
+        </div>
+        <div style="min-width:200px">
+          <div class="bar"><i id="progressBar"></i></div>
+        </div>
+      </div>
+      <div class="sub">講義＋復習の合計学習時間：<b id="totalHours">0.0h</b></div>
+    </div>
+  </section>
+
+  <section id="lectures">
+    <div class="card">
+      <div style="font-weight:800">講義リスト</div>
+      <div id="lectureList"></div>
+    </div>
+  </section>
+
+  <section id="calendar">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div style="font-weight:800">カレンダー</div>
+        <div class="row">
+          <button class="btn ghost" onclick="shiftMonth(-1)">◀</button>
+          <div class="badge" id="calHeader">yyyy/mm</div>
+          <button class="btn ghost" onclick="shiftMonth(1)">▶</button>
+        </div>
+      </div>
+      <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px"></div>
+      <div class="sub">※ 色が濃いほど学習時間が多い（講義＋復習）</div>
+    </div>
+  </section>
+
+  <section id="settings">
+    <div class="card">
+      <div style="font-weight:800">試験カウントダウン</div>
+      <div class="row">
+        <input type="date" id="examDate" class="input">
+        <button class="btn" onclick="saveExamDate()">保存</button>
+        <button class="btn ghost" onclick="clearExamDate()">未設定</button>
+      </div>
+      <div class="sub">設定するとホームとヘッダーに「試験まで◯日」が表示されます。</div>
+    </div>
+  </section>
+</div>
+
+<div class="tabbar">
+  <button onclick="tab('home')" id="tab_home" class="active">ホーム</button>
+  <button onclick="tab('lectures')" id="tab_lectures">講義</button>
+  <button onclick="tab('calendar')" id="tab_calendar">カレンダー</button>
+  <button onclick="tab('settings')" id="tab_settings">設定</button>
+</div>
+
+<script>
+/* ===== tabs (no horizontal scroll) ===== */
+function tab(name){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  ['home','lectures','calendar','settings'].forEach(n=>document.getElementById('tab_'+n).classList.toggle('active', n===name));
+}
+
+/* ===== data ===== */
+const SUBJECTS={"財務":"#FF8A5B","管理":"#FFD166","理論":"#8BC34A","監査":"#5AA7FF","企業":"#B07CFF"};
+const INITIAL_LECTURES=[
+  {subject:"財務", name:"財務入門", total:5, done:5},
+  {subject:"財務", name:"財務計算基礎マスター①", total:20, done:20},
+  {subject:"財務", name:"財務計算基礎マスター②", total:16, done:2},
+  {subject:"財務", name:"財務計算基礎マスター③", total:12, done:0},
+  {subject:"財務", name:"財務計算基礎マスター④", total:12, done:0},
+  {subject:"財務", name:"財務上級講義", total:13, done:0},
+  {subject:"管理", name:"管理入門", total:9, done:9},
+  {subject:"管理", name:"管理基礎マスター", total:22, done:3},
+  {subject:"管理", name:"管理上級", total:14, done:0},
+  {subject:"理論", name:"財務理論入門", total:14, done:0},
+  {subject:"理論", name:"財務理論上級", total:22, done:0},
+  {subject:"監査", name:"監査入門", total:5, done:0},
+  {subject:"監査", name:"監査上級", total:20, done:0},
+  {subject:"企業", name:"企業入門", total:20, done:0},
+  {subject:"企業", name:"企業上級", total:10, done:0},
+  {subject:"企業", name:"企業金商法", total:2, done:0}
+];
+const STATE={lectures:[], examDate:null, weekGoal:25};
+
+/* ===== utils ===== */
+function uid(){return Math.random().toString(36).slice(2,9);}
+function fmt(n){return (Math.round(n*10)/10).toFixed(1);}
+function ymd(d){const y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;}
+function fromYmd(s){const [y,m,dd]=s.split('-').map(Number);const d=new Date(y,m-1,dd);d.setHours(0,0,0,0);return d;}
+function startOfWeek(d){const z=new Date(d);const day=(z.getDay()+6)%7;z.setDate(z.getDate()-day);z.setHours(0,0,0,0);return z;}
+
+/* ===== render ===== */
+function renderAll(){ renderHome(); renderLectures(); renderCalendar(); renderCountdown(); }
+function totalLectures(){ return STATE.lectures.reduce((a,b)=>a+b.total,0); }
+function doneLectures(){ return STATE.lectures.reduce((a,b)=>a+b.done,0); }
+function totalHours(){ let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ s+=g.hours||0; } } return s; }
+function weekHours(){ const sDate=startOfWeek(new Date()); let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ const d=fromYmd(g.date); if(d>=sDate) s+=g.hours||0; } } return s; }
+
+function renderHome(){
+  document.getElementById('totalLectures').textContent=totalLectures();
+  document.getElementById('doneLectures').textContent=doneLectures();
+  const pct = totalLectures()? Math.round(doneLectures()/totalLectures()*100) : 0;
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('progressBar').style.width = pct+'%';
+  const w=weekHours();
+  const pctW=Math.min(100, Math.round(w/STATE.weekGoal*100));
+  document.getElementById('weekTotal').textContent=fmt(w);
+  document.getElementById('weekBar').style.width=pctW+'%';
+  document.getElementById('weekPct').textContent=pctW+'%';
+  document.getElementById('totalHours').textContent=fmt(totalHours())+'h';
+}
+
+function renderLectures(){
+  const box=document.getElementById('lectureList'); box.innerHTML='';
+  for(const L of STATE.lectures){
+    const pct=Math.round((L.done/L.total)*100);
+    const totalH=(L.logs||[]).reduce((a,b)=>a+(b.hours||0),0);
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div style="font-weight:800">${L.name}</div>
+          <div class="sub"><span class="subject-dot" style="background:${SUBJECTS[L.subject]}"></span>${L.subject} ／ <b>${L.done}/${L.total}</b>（${pct}%）</div>
+        </div>
+        <div style="min-width:180px"><div class="bar"><i style="width:${pct}%"></i></div></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" onclick="adjustProgress('${L.id}')">進捗更新</button>
+        <button class="btn watch" ${L.done>=L.total?'disabled':''} onclick="markWatched('${L.id}',this)">視聴済み</button>
+        <div class="right sub">累計自習 <b>${fmt(totalH)}h</b></div>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <input type="date" class="input" id="date_${L.id}" value="${ymd(new Date())}">
+        <input type="number" class="input" id="hours_${L.id}" placeholder="自習時間(h) 例: 1.5" step="0.25" min="0">
+        <button class="btn" onclick="addReview('${L.id}')">自習を記録</button>
+      </div>
+    `;
+    box.appendChild(card);
+  }
+}
+
+/* ===== calendar (with month navigation) ===== */
+let calMonth = new Date(); // 現在の表示月
+function renderCalendar(){
+  const y=calMonth.getFullYear(), m=calMonth.getMonth();
+  const calHeader=document.getElementById('calHeader');
+  const grid=document.getElementById('calGrid'); grid.innerHTML='';
+  calHeader.textContent = `${y}/${String(m+1).padStart(2,'0')}`;
+  const first=new Date(y,m,1);
+  const start=first.getDay(); // 0(日)〜6(土)
+  const days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<start;i++){ const empty=document.createElement('div'); grid.appendChild(empty); }
+  for(let d=1; d<=days; d++){
+    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hrs=dayHours(dateStr);
+    const depth=Math.min(1, hrs/4);
+    const cell=document.createElement('div'); cell.className='card'; cell.style.padding='8px';
+    cell.style.background=`linear-gradient(180deg, rgba(46,196,182,${0.12+0.55*depth}), #fff)`;
+    cell.innerHTML=`<div style="font-weight:800">${d}</div><div class="sub">${fmt(hrs)}h</div>`;
+    grid.appendChild(cell);
+  }
+}
+function shiftMonth(delta){ calMonth.setMonth(calMonth.getMonth()+delta); renderCalendar(); }
+
+function dayHours(dateStr){
+  let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ if(g.date===dateStr) s+=g.hours||0; } } return s;
+}
+
+/* ===== countdown (exam date) ===== */
+function renderCountdown(){
+  const pillHeader=document.getElementById('countdownHeader');
+  const card=document.getElementById('countdownCard');
+  const pillHome=document.getElementById('countdownHome');
+  if(!STATE.examDate){
+    pillHeader.style.display='none';
+    card.style.display='none';
+    return;
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = fromYmd(STATE.examDate);
+  const diff = Math.ceil((target - today)/(1000*60*60*24));
+  const text = diff>=0 ? `試験まで ${diff}日` : `試験：終了`;
+  pillHeader.textContent=text; pillHeader.style.display='inline-block';
+  pillHome.textContent=text; card.style.display='block';
+}
+function saveExamDate(){
+  const v=document.getElementById('examDate').value||null;
+  STATE.examDate=v; renderCountdown();
+}
+function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate').value=''; renderCountdown(); }
+
+/* ===== actions ===== */
+function adjustProgress(id){
+  const L=STATE.lectures.find(x=>x.id===id);
+  const v=prompt(`${L.name} の完了講義数（0〜${L.total}）：`, String(L.done));
+  if(v===null) return;
+  L.done=Math.max(0,Math.min(L.total,parseInt(v,10)||0));
+  renderAll();
+}
+function markWatched(id,btn){
+  const L=STATE.lectures.find(x=>x.id===id); if(!L) return;
+  if(L.done>=L.total) return;
+  L.done+=1; btn.classList.add('active','flash'); setTimeout(()=>btn.classList.remove('flash'),300);
+  if(L.done>=L.total) btn.disabled=true;
+  renderAll();
+}
+function addReview(id){
+  const L=STATE.lectures.find(x=>x.id===id); if(!L) return;
+  const date = document.getElementById('date_'+id).value || ymd(new Date());
+  const hours = parseFloat(document.getElementById('hours_'+id).value||'0');
+  if(!(hours>0)){ alert('自習時間(h)を入力してね'); return; }
+  if(!L.logs) L.logs=[];
+  L.logs.push({date, type:'review', hours});
+  document.getElementById('hours_'+id).value='';
+  renderAll();
+}
+
+/* ===== init ===== */
+function boot(){
+  STATE.lectures = INITIAL_LECTURES.map(l=>({...l, id:uid(), logs:[]}));
+  renderAll();
+}
+window.addEventListener('load', boot);
+</script>
+</body>
+</html>
