@@ -43,7 +43,6 @@ section.active{display:block}
 </div>
 <div class="container">
   <section id="home" class="active">
-    <!-- ✅ Homeにカウントダウン -->
     <div class="card" id="countdownCard" style="display:none">
       <div class="row" style="justify-content:space-between">
         <div style="font-weight:800">試験カウントダウン</div>
@@ -120,14 +119,12 @@ section.active{display:block}
 </div>
 
 <script>
-/* ===== tabs (no horizontal scroll) ===== */
 function tab(name){
   document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
   document.getElementById(name).classList.add('active');
   ['home','lectures','calendar','settings'].forEach(n=>document.getElementById('tab_'+n).classList.toggle('active', n===name));
 }
 
-/* ===== data ===== */
 const SUBJECTS={"財務":"#FF8A5B","管理":"#FFD166","理論":"#8BC34A","監査":"#5AA7FF","企業":"#B07CFF"};
 const INITIAL_LECTURES=[
   {subject:"財務", name:"財務入門", total:5, done:5},
@@ -148,22 +145,22 @@ const INITIAL_LECTURES=[
   {subject:"企業", name:"企業金商法", total:2, done:0}
 ];
 const STATE={lectures:[], examDate:null, weekGoal:25};
-const LSKEY = 'tac:state:v1';
+
+// 保存・読み込み機能
+const LSKEY='tac:state:v1';
 function saveState(){ localStorage.setItem(LSKEY, JSON.stringify(STATE)); }
 function loadState(){
-  const raw = localStorage.getItem(LSKEY);
+  const raw=localStorage.getItem(LSKEY);
   if(!raw) return false;
-  try { Object.assign(STATE, JSON.parse(raw)); return true; } catch { return false; }
+  try{ Object.assign(STATE, JSON.parse(raw)); return true; }catch{return false;}
 }
-  
-/* ===== utils ===== */
+
 function uid(){return Math.random().toString(36).slice(2,9);}
 function fmt(n){return (Math.round(n*10)/10).toFixed(1);}
 function ymd(d){const y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;}
 function fromYmd(s){const [y,m,dd]=s.split('-').map(Number);const d=new Date(y,m-1,dd);d.setHours(0,0,0,0);return d;}
 function startOfWeek(d){const z=new Date(d);const day=(z.getDay()+6)%7;z.setDate(z.getDate()-day);z.setHours(0,0,0,0);return z;}
 
-/* ===== render ===== */
 function renderAll(){ renderHome(); renderLectures(); renderCalendar(); renderCountdown(); }
 function totalLectures(){ return STATE.lectures.reduce((a,b)=>a+b.total,0); }
 function doneLectures(){ return STATE.lectures.reduce((a,b)=>a+b.done,0); }
@@ -214,18 +211,17 @@ function renderLectures(){
   }
 }
 
-/* ===== calendar (with month navigation) ===== */
-let calMonth = new Date(); // 現在の表示月
+let calMonth=new Date();
 function renderCalendar(){
   const y=calMonth.getFullYear(), m=calMonth.getMonth();
   const calHeader=document.getElementById('calHeader');
   const grid=document.getElementById('calGrid'); grid.innerHTML='';
-  calHeader.textContent = `${y}/${String(m+1).padStart(2,'0')}`;
+  calHeader.textContent=`${y}/${String(m+1).padStart(2,'0')}`;
   const first=new Date(y,m,1);
-  const start=first.getDay(); // 0(日)〜6(土)
+  const start=first.getDay();
   const days=new Date(y,m+1,0).getDate();
-  for(let i=0;i<start;i++){ const empty=document.createElement('div'); grid.appendChild(empty); }
-  for(let d=1; d<=days; d++){
+  for(let i=0;i<start;i++){grid.appendChild(document.createElement('div'));}
+  for(let d=1;d<=days;d++){
     const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const hrs=dayHours(dateStr);
     const depth=Math.min(1, hrs/4);
@@ -236,121 +232,23 @@ function renderCalendar(){
   }
 }
 function shiftMonth(delta){ calMonth.setMonth(calMonth.getMonth()+delta); renderCalendar(); }
+function dayHours(dateStr){ let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ if(g.date===dateStr) s+=g.hours||0; } } return s; }
 
-function dayHours(dateStr){
-  let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ if(g.date===dateStr) s+=g.hours||0; } } return s;
-}
-
-/* ===== countdown (exam date) ===== */
 function renderCountdown(){
   const pillHeader=document.getElementById('countdownHeader');
   const card=document.getElementById('countdownCard');
   const pillHome=document.getElementById('countdownHome');
-  if(!STATE.examDate){
-    pillHeader.style.display='none';
-    card.style.display='none';
-    return;
-  }
-  const today = new Date(); today.setHours(0,0,0,0);
-  const target = fromYmd(STATE.examDate);
-  const diff = Math.ceil((target - today)/(1000*60*60*24));
-  const text = diff>=0 ? `試験まで ${diff}日` : `試験：終了`;
+  if(!STATE.examDate){ pillHeader.style.display='none'; card.style.display='none'; return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const target=fromYmd(STATE.examDate);
+  const diff=Math.ceil((target-today)/(1000*60*60*24));
+  const text=diff>=0?`試験まで ${diff}日`:`試験：終了`;
   pillHeader.textContent=text; pillHeader.style.display='inline-block';
   pillHome.textContent=text; card.style.display='block';
+  document.getElementById('examDate').value=STATE.examDate||'';
 }
-function saveExamDate(){
-  const v=document.getElementById('examDate').value||null;
-  STATE.examDate=v; renderCountdown();//
-}
-function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate').value=''; renderCountdown(); }//
+function saveExamDate(){ const v=document.getElementById('examDate').value||null; STATE.examDate=v; renderCountdown(); saveState(); }
+function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate').value=''; renderCountdown(); saveState(); }
 
-/* ===== actions ===== */
 function adjustProgress(id){
-  const L=STATE.lectures.find(x=>x.id===id);
-  const v=prompt(`${L.name} の完了講義数（0〜${L.total}）：`, String(L.done));
-  if(v===null) return;
-  L.done=Math.max(0,Math.min(L.total,parseInt(v,10)||0));
-  renderAll();
-}
-function markWatched(id,btn){
-  const L=STATE.lectures.find(x=>x.id===id); if(!L) return;
-  if(L.done>=L.total) return;
-  L.done+=1; btn.classList.add('active','flash'); setTimeout(()=>btn.classList.remove('flash'),300);
-  if(L.done>=L.total) btn.disabled=true;
-  renderAll();
-}
-function addReview(id){
-  const L=STATE.lectures.find(x=>x.id===id); if(!L) return;
-  const date = document.getElementById('date_'+id).value || ymd(new Date());
-  const hours = parseFloat(document.getElementById('hours_'+id).value||'0');
-  if(!(hours>0)){ alert('自習時間(h)を入力してね'); return; }
-  if(!L.logs) L.logs=[];
-  L.logs.push({date, type:'review', hours});
-  document.getElementById('hours_'+id).value='';
-  renderAll();
-}
-
-/* ===== init ===== */
-function boot(){
-  if (!loadState()) {
-    STATE.lectures = INITIAL_LECTURES.map(l=>({...l, id:uid(), logs:[]}));
-  }
-  renderAll();
-}
-}
-window.addEventListener('load', boot);
-</script>
-  <script src="save.js"></script>
-<script>
-(() => {
-  const KEY = "tac:save";
-
-  function saveData() {
-    const data = {};
-    document.querySelectorAll("input, textarea, select").forEach(el => {
-      const id = el.id || el.name;
-      if (!id) return;
-      if (el.type === "checkbox" || el.type === "radio") {
-        data[id] = el.checked;
-      } else {
-        data[id] = el.value;
-      }
-    });
-    localStorage.setItem(KEY, JSON.stringify(data));
-    alert("保存しました！");
-  }
-
-  function loadData() {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    for (const [id, val] of Object.entries(data)) {
-      const el = document.getElementById(id) || document.getElementsByName(id)[0];
-      if (!el) continue;
-      if (el.type === "checkbox" || el.type === "radio") {
-        el.checked = val;
-      } else {
-        el.value = val;
-      }
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    loadData();
-
-    // 右下に「保存」ボタンを出す
-    const btn = document.createElement("button");
-    btn.textContent = "💾 保存";
-    Object.assign(btn.style, {
-      position:"fixed", right:"20px", bottom:"20px",
-      padding:"10px 16px", background:"#4CAF50", color:"#fff",
-      border:"none", borderRadius:"8px", fontSize:"16px",
-      cursor:"pointer", zIndex:"9999"
-    });
-    btn.onclick = saveData;
-    document.body.appendChild(btn);
-  });
-})();
-</script>
-  <!-- 一度だけSWを無効化してキャッシュを外す -->
-</html>
+  const L=STATE.lectures.find(x=>x.id===id
