@@ -252,3 +252,53 @@ function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate
 
 function adjustProgress(id){
   const L=STATE.lectures.find(x=>x.id===id
+                      function adjustProgress(id){
+  const L=STATE.lectures.find(x=>x.id===id);
+  const v=prompt(`${L.name} の完了講義数（0〜${L.total}）：`, String(L.done));
+  if(v===null) return;
+  L.done=Math.max(0,Math.min(L.total,parseInt(v,10)||0));
+  renderAll();
+  saveState();
+}
+
+function markWatched(id,btn){
+  const L=STATE.lectures.find(x=>x.id===id);
+  if(!L) return;
+  if(L.done>=L.total) return;
+  L.done+=1;
+  btn.classList.add('active','flash');
+  setTimeout(()=>btn.classList.remove('flash'),300);
+  if(L.done>=L.total) btn.disabled=true;
+  renderAll();
+  saveState();
+}
+
+function addReview(id){
+  const L=STATE.lectures.find(x=>x.id===id);
+  if(!L) return;
+  const date=document.getElementById('date_'+id).value || ymd(new Date());
+  const hours=parseFloat(document.getElementById('hours_'+id).value||'0');
+  if(!(hours>0)){ alert('自習時間(h)を入力してね'); return; }
+  if(!L.logs) L.logs=[];
+  L.logs.push({date, type:'review', hours});
+  document.getElementById('hours_'+id).value='';
+  renderAll();
+  saveState();
+}
+
+function boot(){
+  if(!loadState()){
+    STATE.lectures=INITIAL_LECTURES.map(l=>({...l, id:uid(), logs:[]}));
+  }
+  renderAll();
+}
+window.addEventListener('load', boot);
+</script>
+
+<!-- キャッシュ削除 -->
+<script>
+navigator.serviceWorker&&navigator.serviceWorker.getRegistrations()
+.then(rs=>rs.forEach(r=>r.unregister()));
+</script>
+</body>
+</html>        
