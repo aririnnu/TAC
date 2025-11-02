@@ -62,6 +62,7 @@ section.active{display:block}
         </div>
       </div>
     </div>
+
     <div class="card">
       <div class="row" style="justify-content:space-between">
         <div>
@@ -75,8 +76,7 @@ section.active{display:block}
       <div class="sub">講義＋復習の合計学習時間：<b id="totalHours">0.0h</b></div>
     </div>
   </section>
-
-  <section id="lectures">
+    <section id="lectures">
     <div class="card">
       <div style="font-weight:800">講義リスト</div>
       <div id="lectureList"></div>
@@ -117,36 +117,29 @@ section.active{display:block}
   <button onclick="tab('calendar')" id="tab_calendar">カレンダー</button>
   <button onclick="tab('settings')" id="tab_settings">設定</button>
 </div>
-
 <script>
+/* ===== タブ切り替え ===== */
 function tab(name){
   document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
   document.getElementById(name).classList.add('active');
   ['home','lectures','calendar','settings'].forEach(n=>document.getElementById('tab_'+n).classList.toggle('active', n===name));
 }
 
+/* ===== データ ===== */
 const SUBJECTS={"財務":"#FF8A5B","管理":"#FFD166","理論":"#8BC34A","監査":"#5AA7FF","企業":"#B07CFF"};
 const INITIAL_LECTURES=[
   {subject:"財務", name:"財務入門", total:5, done:5},
   {subject:"財務", name:"財務計算基礎マスター①", total:20, done:20},
   {subject:"財務", name:"財務計算基礎マスター②", total:16, done:2},
   {subject:"財務", name:"財務計算基礎マスター③", total:12, done:0},
-  {subject:"財務", name:"財務計算基礎マスター④", total:12, done:0},
-  {subject:"財務", name:"財務上級講義", total:13, done:0},
   {subject:"管理", name:"管理入門", total:9, done:9},
   {subject:"管理", name:"管理基礎マスター", total:22, done:3},
-  {subject:"管理", name:"管理上級", total:14, done:0},
-  {subject:"理論", name:"財務理論入門", total:14, done:0},
-  {subject:"理論", name:"財務理論上級", total:22, done:0},
   {subject:"監査", name:"監査入門", total:5, done:0},
-  {subject:"監査", name:"監査上級", total:20, done:0},
-  {subject:"企業", name:"企業入門", total:20, done:0},
-  {subject:"企業", name:"企業上級", total:10, done:0},
-  {subject:"企業", name:"企業金商法", total:2, done:0}
+  {subject:"企業", name:"企業入門", total:20, done:0}
 ];
 const STATE={lectures:[], examDate:null, weekGoal:25};
 
-// 保存・読み込み機能
+/* ===== 保存機能 ===== */
 const LSKEY='tac:state:v1';
 function saveState(){ localStorage.setItem(LSKEY, JSON.stringify(STATE)); }
 function loadState(){
@@ -155,18 +148,21 @@ function loadState(){
   try{ Object.assign(STATE, JSON.parse(raw)); return true; }catch{return false;}
 }
 
+/* ===== ユーティリティ ===== */
 function uid(){return Math.random().toString(36).slice(2,9);}
 function fmt(n){return (Math.round(n*10)/10).toFixed(1);}
 function ymd(d){const y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;}
 function fromYmd(s){const [y,m,dd]=s.split('-').map(Number);const d=new Date(y,m-1,dd);d.setHours(0,0,0,0);return d;}
 function startOfWeek(d){const z=new Date(d);const day=(z.getDay()+6)%7;z.setDate(z.getDate()-day);z.setHours(0,0,0,0);return z;}
 
+/* ===== 画面描画 ===== */
 function renderAll(){ renderHome(); renderLectures(); renderCalendar(); renderCountdown(); }
 function totalLectures(){ return STATE.lectures.reduce((a,b)=>a+b.total,0); }
 function doneLectures(){ return STATE.lectures.reduce((a,b)=>a+b.done,0); }
 function totalHours(){ let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ s+=g.hours||0; } } return s; }
 function weekHours(){ const sDate=startOfWeek(new Date()); let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ const d=fromYmd(g.date); if(d>=sDate) s+=g.hours||0; } } return s; }
 
+/* ===== ホーム ===== */
 function renderHome(){
   document.getElementById('totalLectures').textContent=totalLectures();
   document.getElementById('doneLectures').textContent=doneLectures();
@@ -181,6 +177,7 @@ function renderHome(){
   document.getElementById('totalHours').textContent=fmt(totalHours())+'h';
 }
 
+/* ===== 講義リスト ===== */
 function renderLectures(){
   const box=document.getElementById('lectureList'); box.innerHTML='';
   for(const L of STATE.lectures){
@@ -203,28 +200,28 @@ function renderLectures(){
       <div class="divider"></div>
       <div class="row">
         <input type="date" class="input" id="date_${L.id}" value="${ymd(new Date())}">
-        <input type="number" class="input" id="hours_${L.id}" placeholder="自習時間(h) 例: 1.5" step="0.25" min="0">
+        <input type="number" class="input" id="hours_${L.id}" placeholder="自習時間(h)" step="0.25" min="0">
         <button class="btn" onclick="addReview('${L.id}')">自習を記録</button>
       </div>
     `;
     box.appendChild(card);
   }
 }
-
-let calMonth=new Date();
+  /* ===== カレンダー ===== */
+let calMonth = new Date();
 function renderCalendar(){
   const y=calMonth.getFullYear(), m=calMonth.getMonth();
-  const calHeader=document.getElementById('calHeader');
+  const header=document.getElementById('calHeader');
   const grid=document.getElementById('calGrid'); grid.innerHTML='';
-  calHeader.textContent=`${y}/${String(m+1).padStart(2,'0')}`;
+  header.textContent=`${y}/${String(m+1).padStart(2,'0')}`;
   const first=new Date(y,m,1);
   const start=first.getDay();
   const days=new Date(y,m+1,0).getDate();
-  for(let i=0;i<start;i++){grid.appendChild(document.createElement('div'));}
-  for(let d=1;d<=days;d++){
+  for(let i=0;i<start;i++){ grid.appendChild(document.createElement('div')); }
+  for(let d=1; d<=days; d++){
     const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const hrs=dayHours(dateStr);
-    const depth=Math.min(1, hrs/4);
+    const depth=Math.min(1,hrs/4);
     const cell=document.createElement('div'); cell.className='card'; cell.style.padding='8px';
     cell.style.background=`linear-gradient(180deg, rgba(46,196,182,${0.12+0.55*depth}), #fff)`;
     cell.innerHTML=`<div style="font-weight:800">${d}</div><div class="sub">${fmt(hrs)}h</div>`;
@@ -232,67 +229,69 @@ function renderCalendar(){
   }
 }
 function shiftMonth(delta){ calMonth.setMonth(calMonth.getMonth()+delta); renderCalendar(); }
-function dayHours(dateStr){ let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ if(g.date===dateStr) s+=g.hours||0; } } return s; }
+function dayHours(dateStr){
+  let s=0; for(const L of STATE.lectures){ for(const g of (L.logs||[])){ if(g.date===dateStr) s+=g.hours||0; } }
+  return s;
+}
 
+/* ===== 試験カウントダウン ===== */
 function renderCountdown(){
-  const pillHeader=document.getElementById('countdownHeader');
+  const head=document.getElementById('countdownHeader');
   const card=document.getElementById('countdownCard');
-  const pillHome=document.getElementById('countdownHome');
-  if(!STATE.examDate){ pillHeader.style.display='none'; card.style.display='none'; return; }
+  const home=document.getElementById('countdownHome');
+  if(!STATE.examDate){ head.style.display='none'; card.style.display='none'; return; }
   const today=new Date(); today.setHours(0,0,0,0);
-  const target=fromYmd(STATE.examDate);
-  const diff=Math.ceil((target-today)/(1000*60*60*24));
+  const diff=Math.ceil((fromYmd(STATE.examDate)-today)/(1000*60*60*24));
   const text=diff>=0?`試験まで ${diff}日`:`試験：終了`;
-  pillHeader.textContent=text; pillHeader.style.display='inline-block';
-  pillHome.textContent=text; card.style.display='block';
+  head.textContent=text; home.textContent=text;
+  head.style.display='inline-block'; card.style.display='block';
   document.getElementById('examDate').value=STATE.examDate||'';
 }
-function saveExamDate(){ const v=document.getElementById('examDate').value||null; STATE.examDate=v; renderCountdown(); saveState(); }
-function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate').value=''; renderCountdown(); saveState(); }
-
-function adjustProgress(id){
-  const L=STATE.lectures.find(x=>x.id===id
-                      function adjustProgress(id){
-  const L=STATE.lectures.find(x=>x.id===id);
-  const v=prompt(`${L.name} の完了講義数（0〜${L.total}）：`, String(L.done));
-  if(v===null) return;
-  L.done=Math.max(0,Math.min(L.total,parseInt(v,10)||0));
-  renderAll();
-  saveState();
+function saveExamDate(){
+  STATE.examDate=document.getElementById('examDate').value||null;
+  renderCountdown(); saveState();
+}
+function clearExamDate(){
+  STATE.examDate=null; document.getElementById('examDate').value='';
+  renderCountdown(); saveState();
 }
 
+/* ===== 操作系 ===== */
+function adjustProgress(id){
+  const L=STATE.lectures.find(x=>x.id===id);
+  const v=prompt(`${L.name} の完了講義数（0〜${L.total}）：`,L.done);
+  if(v===null)return;
+  L.done=Math.max(0,Math.min(L.total,parseInt(v,10)||0));
+  renderAll(); saveState();
+}
 function markWatched(id,btn){
   const L=STATE.lectures.find(x=>x.id===id);
-  if(!L) return;
-  if(L.done>=L.total) return;
-  L.done+=1;
-  btn.classList.add('active','flash');
+  if(!L||L.done>=L.total)return;
+  L.done++; btn.classList.add('active','flash');
   setTimeout(()=>btn.classList.remove('flash'),300);
-  if(L.done>=L.total) btn.disabled=true;
-  renderAll();
-  saveState();
+  if(L.done>=L.total)btn.disabled=true;
+  renderAll(); saveState();
 }
-
 function addReview(id){
   const L=STATE.lectures.find(x=>x.id===id);
-  if(!L) return;
-  const date=document.getElementById('date_'+id).value || ymd(new Date());
+  if(!L)return;
+  const date=document.getElementById('date_'+id).value||ymd(new Date());
   const hours=parseFloat(document.getElementById('hours_'+id).value||'0');
-  if(!(hours>0)){ alert('自習時間(h)を入力してね'); return; }
-  if(!L.logs) L.logs=[];
-  L.logs.push({date, type:'review', hours});
+  if(!(hours>0)){alert('自習時間(h)を入力してね');return;}
+  if(!L.logs)L.logs=[];
+  L.logs.push({date,type:'review',hours});
   document.getElementById('hours_'+id).value='';
-  renderAll();
-  saveState();
+  renderAll(); saveState();
 }
 
+/* ===== 起動処理 ===== */
 function boot(){
   if(!loadState()){
-    STATE.lectures=INITIAL_LECTURES.map(l=>({...l, id:uid(), logs:[]}));
+    STATE.lectures=INITIAL_LECTURES.map(l=>({...l,id:uid(),logs:[]}));
   }
   renderAll();
 }
-window.addEventListener('load', boot);
+window.addEventListener('load',boot);
 </script>
 
 <!-- キャッシュ削除 -->
@@ -301,4 +300,4 @@ navigator.serviceWorker&&navigator.serviceWorker.getRegistrations()
 .then(rs=>rs.forEach(r=>r.unregister()));
 </script>
 </body>
-</html>        
+</html>
