@@ -148,7 +148,14 @@ const INITIAL_LECTURES=[
   {subject:"企業", name:"企業金商法", total:2, done:0}
 ];
 const STATE={lectures:[], examDate:null, weekGoal:25};
-
+const LSKEY = 'tac:state:v1';
+function saveState(){ localStorage.setItem(LSKEY, JSON.stringify(STATE)); }
+function loadState(){
+  const raw = localStorage.getItem(LSKEY);
+  if(!raw) return false;
+  try { Object.assign(STATE, JSON.parse(raw)); return true; } catch { return false; }
+}
+  
 /* ===== utils ===== */
 function uid(){return Math.random().toString(36).slice(2,9);}
 function fmt(n){return (Math.round(n*10)/10).toFixed(1);}
@@ -253,9 +260,9 @@ function renderCountdown(){
 }
 function saveExamDate(){
   const v=document.getElementById('examDate').value||null;
-  STATE.examDate=v; renderCountdown();
+  STATE.examDate=v; renderCountdown();//
 }
-function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate').value=''; renderCountdown(); }
+function clearExamDate(){ STATE.examDate=null; document.getElementById('examDate').value=''; renderCountdown(); }//
 
 /* ===== actions ===== */
 function adjustProgress(id){
@@ -285,8 +292,11 @@ function addReview(id){
 
 /* ===== init ===== */
 function boot(){
-  STATE.lectures = INITIAL_LECTURES.map(l=>({...l, id:uid(), logs:[]}));
+  if (!loadState()) {
+    STATE.lectures = INITIAL_LECTURES.map(l=>({...l, id:uid(), logs:[]}));
+  }
   renderAll();
+}
 }
 window.addEventListener('load', boot);
 </script>
@@ -343,8 +353,4 @@ window.addEventListener('load', boot);
 })();
 </script>
   <!-- 一度だけSWを無効化してキャッシュを外す -->
-<script>navigator.serviceWorker&&navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));</script>
-<!-- 保存ボタンのスクリプト（キャッシュ回避のため ?v=3 を付ける） -->
-<script src="save.js?v=3"></script>
-</body>
 </html>
