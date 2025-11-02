@@ -1,7 +1,6 @@
 (() => {
   const KEY = "tac:save";
 
-  // 入力内容を保存する関数
   function saveData() {
     const data = {};
     document.querySelectorAll("input, textarea, select").forEach(el => {
@@ -14,9 +13,9 @@
       }
     });
     localStorage.setItem(KEY, JSON.stringify(data));
+    alert("保存しました！");
   }
 
-  // 保存した内容を読み込む関数
   function loadData() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return;
@@ -32,9 +31,26 @@
     }
   }
 
-  // ページを開いた時に読み込み、自動保存もON
+  // ページが開かれた時に保存ボタンを作って読み込み
   document.addEventListener("DOMContentLoaded", () => {
     loadData();
-    document.addEventListener("input", () => saveData());
+
+    // 保存ボタンを右下に表示
+    const btn = document.createElement("button");
+    btn.textContent = "💾 保存";
+    btn.style.position = "fixed";
+    btn.style.right = "20px";
+    btn.style.bottom = "20px";
+    btn.style.padding = "10px 16px";
+    btn.style.background = "#4CAF50";
+    btn.style.color = "white";
+    btn.style.border = "none";
+    btn.style.borderRadius = "8px";
+    btn.style.fontSize = "16px";
+    btn.style.cursor = "pointer";
+    btn.style.zIndex = "9999";
+    btn.onclick = saveData;
+
+    document.body.appendChild(btn);
   });
 })();
