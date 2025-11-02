@@ -291,5 +291,56 @@ function boot(){
 window.addEventListener('load', boot);
 </script>
   <script src="save.js"></script>
+<script>
+(() => {
+  const KEY = "tac:save";
+
+  function saveData() {
+    const data = {};
+    document.querySelectorAll("input, textarea, select").forEach(el => {
+      const id = el.id || el.name;
+      if (!id) return;
+      if (el.type === "checkbox" || el.type === "radio") {
+        data[id] = el.checked;
+      } else {
+        data[id] = el.value;
+      }
+    });
+    localStorage.setItem(KEY, JSON.stringify(data));
+    alert("保存しました！");
+  }
+
+  function loadData() {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    for (const [id, val] of Object.entries(data)) {
+      const el = document.getElementById(id) || document.getElementsByName(id)[0];
+      if (!el) continue;
+      if (el.type === "checkbox" || el.type === "radio") {
+        el.checked = val;
+      } else {
+        el.value = val;
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadData();
+
+    // 右下に「保存」ボタンを出す
+    const btn = document.createElement("button");
+    btn.textContent = "💾 保存";
+    Object.assign(btn.style, {
+      position:"fixed", right:"20px", bottom:"20px",
+      padding:"10px 16px", background:"#4CAF50", color:"#fff",
+      border:"none", borderRadius:"8px", fontSize:"16px",
+      cursor:"pointer", zIndex:"9999"
+    });
+    btn.onclick = saveData;
+    document.body.appendChild(btn);
+  });
+})();
+</script>
 </body>
 </html>
