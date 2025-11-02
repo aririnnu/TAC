@@ -342,5 +342,9 @@ window.addEventListener('load', boot);
   });
 })();
 </script>
+  <!-- 一度だけSWを無効化してキャッシュを外す -->
+<script>navigator.serviceWorker&&navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));</script>
+<!-- 保存ボタンのスクリプト（キャッシュ回避のため ?v=3 を付ける） -->
+<script src="save.js?v=3"></script>
 </body>
 </html>
